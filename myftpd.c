@@ -16,7 +16,7 @@
 #include <signal.h>
 #include <stdlib.h>
 
-#BUF_SIZE	256
+#define BUF_SIZE	256
 
 void daemon_init(void)
 {
@@ -75,11 +75,22 @@ void serve_a_client(int sd)
 	}
 }
 
-main()
+main(int argc, char *argv[])
 {
 	int sd, nsd, n, spn, sip, cli_addr_len;
 	pid_t, pid;
 	struct sockaddr_in ser_addr, cli_addr;
+	
+	//Get port number from command line or user input
+	if(argc == 2)
+	{
+		spn = argv[1];
+	}
+	else
+	{
+		printf("Enter a port number: ");
+		scanf("%d", &spn);
+	}
 	
 	//Turn the program into a daemon_init
 	daemon_init();
@@ -91,8 +102,7 @@ main()
 		exit(1);
 	}
 	
-	//Get the port number and ip address for the server to use
-	//port number = spn
+	//Get the ip address for the server to use
 	//ip-address = sip
 	
 	//Build server Internet socket address

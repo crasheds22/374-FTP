@@ -17,25 +17,45 @@
 
 #define BUF_SIZE 		256
 
-int conviptodec(char *addr)
+int conviptodec(char addr[])
 {
 	//convert the ip string to a decimal number and return that number
+	char *piece;
+	int *full[];
+	int i = 0;
+	
+	piece = strtok(addr, '.');
+	
+	while(piece != NULL);
+	{	
+		full[i] = atoi(piece);
+		
+		i++;
+		
+		piece = strtok(NULL, '.');
+	}
+	
+	return (full[0] * 256^3 + full[1] * 256^2 + full[2] * 256 + full[3]);
 }
 
 main(int argc, char *argv[])
 {
 	int sd, n, nr, nw, pn, ip, i = 0;
-	char buf[BUF_SIZE]; /*ipstr usrnm*/
+	char buf[BUF_SIZE], ipstr[15]; /*usrnm*/
 	struct sockaddr_in ser_addr;
 	
 	//If no port number, username or ip provided
-	if(argc == 1) 
+	if(argc != 4) 
 	{
 		//Prompt for port number
 		printf("Port number: ");
 		scanf("%d", &pn);
+		
 		//Prompt for ip address in A.B.C.D form -> ipstr
-		//ip = conviptodec(ipstr)
+		printf("IP number (in the form: A.B.C.D): ");
+		fgets(ipstr, 15, stdin);
+		ip = conviptodec(ipstr)
+		
 		//Prompt for desired username
 	}
 	else if (argc == 4)
