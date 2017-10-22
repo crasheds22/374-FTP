@@ -9,11 +9,11 @@
  
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netintet/in.h> /* struct sockaddr_in, htons, htonl */
+#include <netinet/in.h> /* struct sockaddr_in, htons, htonl */
  
 #include <string.h>
 #include <stdio.h>
-#inclide <stdlib.h>
+#include <stdlib.h>
 
 #define BUF_SIZE 		256
 
@@ -21,7 +21,7 @@ int conviptodec(char addr[])
 {
 	//convert the ip string to a decimal number and return that number
 	char *piece;
-	int *full[];
+	int full[4];
 	int i = 0;
 	
 	piece = strtok(addr, '.');
@@ -38,33 +38,53 @@ int conviptodec(char addr[])
 	return (full[0] * 256^3 + full[1] * 256^2 + full[2] * 256 + full[3]);
 }
 
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int sd, n, nr, nw, pn, ip, i = 0;
 	char buf[BUF_SIZE], ipstr[15]; /*usrnm*/
 	struct sockaddr_in ser_addr;
+
+
+	for(i = 0; i < 15; i++)
+	{
+		ipstr[i] = "\0";
+	}
 	
 	//If no port number, username or ip provided
-	if(argc != 4) 
+	if (argc == 4)
+	{
+		pn = argv[1];
+		//ip = conviptodec(argv[2]);
+		//usrnm = argv[3];
+	}
+	else 
 	{
 		//Prompt for port number
 		printf("Port number: ");
 		scanf("%d", &pn);
 		
 		//Prompt for ip address in A.B.C.D form -> ipstr
-		printf("IP number (in the form: A.B.C.D): ");
-		fgets(ipstr, 15, stdin);
-		ip = conviptodec(ipstr)
+		printf("IP number (in the form: A.B.C.D): \n");
+		fflush(stdin);
+		scanf("%s", ipstr);
+		fflush(stdin);
+		//fgets(ipstr, 15, stdin);
+		printf("------------------------------------------");
+		for(i = 0; i < 15; i++)
+		{
+			if(ipstr[i] == "\n")
+			{
+				ipstr[i] = "\0";
+			}
+		}
+		
+		ip = conviptodec(ipstr);
 		
 		//Prompt for desired username
 	}
-	else if (argc == 4)
-	{
-		pn = argv[1];
-		//ip = conviptodec(argv[2]);
-		//usrnm = argv[3];
-	}
 	
+	printf("ip in decimal form = %d \n", ip);
+  
 	/*Get host address and build a server socket address */
 	bzero((char *)&ser_addr, sizeof(ser_addr));
 	
