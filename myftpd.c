@@ -6,11 +6,12 @@
  *	myftpd - (Assignment 2, Gil Hicks/Aaron Thomson, 21/10/2017)
  *
  */
- 
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
-#include <netinet/in.h> 
+#include <netinet/in.h>
+#include <errno.h>
 
 #include <string.h>
 #include <signal.h>
@@ -18,10 +19,23 @@
 
 #define BUF_SIZE	256
 
+int numChld = 0;
+
+void kill_zombies ()
+{
+	pid_t pid = 1;
+
+	while (pid > 0) 
+	{
+		pid = waitpid(-1, (int *)0, WNOHANG);
+	}
+}
+
 void daemon_init(void)
 {
 	pid_t pid;
-	
+	struct sigaction act;
+
 	if((pid = fork()) < 0)
 	{
 		perror("Fork");
@@ -32,11 +46,16 @@ void daemon_init(void)
 		//Close the parent process
 		exit(0);
 	}
-	
+
 	//Child continues
 	setsid(); 	//Become session leader
 	chdir("/"); 	//Change working directory
 	umask(0);	//Clear out file mode creation mask
+
+	act.sa_handler = kill_zombies;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = SA_NOCLDSTOP;
+	sigaction(SIGCHLD, (struct sigaction *)&act, (struct sigaction *)0);
 }
 
 unsigned long conviptodec(char addr[])
@@ -53,7 +72,7 @@ unsigned long conviptodec(char addr[])
 
 	for(i = 0; i < strlen(addr); i++)
 	{
-		if(addr[i] == '.' || addr[i] == '\n')
+		if(addr[i] == '.')
 		{
 			for(j = m; j <= i; j++)
 			{
@@ -104,16 +123,36 @@ void serve_a_client(int sd)
 		//Read data from the client
 		if((nr = read(sd, buf, sizeof(buf))) <= 0)
 		{
+			numChld--;
 			//Connection broke down
 			exit(0);
 		}
 		
 		//Process data
 		buf[nr] = '\0';
-		reverse(buf);
+
+		if(strcmp(buf, "kill") == 0) 
+		{
+			if(numChld == 1)
+			{
+				buf[0] = 'm';
+				nw = write(sd, buf, nr);
+				kill(getppid(), SIGTERM);
+				exit(0);
+			}
+			else
+			{
+				*buf = "denied";
+				nw = write(sd, buf, nr);
+			}
+		} 
+		else 
+		{
+			reverse(buf);
 		
-		//Send results to the client
-		nw = write(sd, buf, nr);
+			//Send results to the client
+			nw = write(sd, buf, nr);
+		}
 	}
 }
 
@@ -128,6 +167,8 @@ main(int argc, char *argv[])
 	if(argc == 3)
 	{
 		spn = argv[1];
+
+		argv[2][strlen(argv[2])] = '.';
 		sip = conviptodec(argv[2]);
 	}
 	else
@@ -137,9 +178,11 @@ main(int argc, char *argv[])
 
 		printf("Enter an ip address: ");
 		scanf("%s", sipstr);
+		sipstr[strlen(sipstr)] = '.';
 
 		sip = conviptodec(sipstr);
 	}
+	printf("%lu\n", sip);
 	
 	//Turn the program into a daemon_init
 	daemon_init();
@@ -153,8 +196,11 @@ main(int argc, char *argv[])
 	
 	//Build server Internet socket address
 	bzero((char *)&ser_addr, sizeof(ser_addr));
+	
 	ser_addr.sin_family = AF_INET;
+
 	ser_addr.sin_port = htons((uint16_t)spn);
+
 	ser_addr.sin_addr.s_addr = htonl((uint32_t)sip);
 	
 	//bind server address to socket sd
@@ -175,6 +221,9 @@ main(int argc, char *argv[])
 		
 		if(nsd < 0)
 		{
+			if(errno == EINTR) //If interrupted by SIGCHILD
+				continue;
+
 			perror("server:accept");
 			exit(1);
 		}
@@ -188,6 +237,8 @@ main(int argc, char *argv[])
 		else if(pid > 0)
 		{
 			close(nsd);
+			numChld++;
+			printf("%d\n", numChld);
 			continue; //Parent to wait for next client
 		}
 		
