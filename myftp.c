@@ -17,73 +17,79 @@
 
 #define BUF_SIZE 		256
 
-int conviptodec(char addr[])
+unsigned long conviptodec(char addr[])
 {
 	//convert the ip string to a decimal number and return that number
 	char *piece;
-	int full[4];
-	int i = 0;
+	char temp[4][4];
+
+	unsigned long full[4];
+	unsigned long ret = 0;
+	int i, j = 0, k = 0, m = 0;
+
 	
-	piece = strtok(addr, '.');
+
+	for(i = 0; i < strlen(addr); i++)
+	{
+		if(addr[i] == '.' || addr[i] == '\n')
+		{
+			for(j = m; j <= i; j++)
+			{
+				if(j == i)
+					temp[k][j - m] = '\0';
+				else
+					temp[k][j - m] = addr[j];
+			}
+ 			k++;
+			m = i + 1;
+		}
+	}
+
 	
-	while(piece != NULL);
-	{	
-		full[i] = atoi(piece);
-		
-		i++;
-		
-		piece = strtok(NULL, '.');
+	for(m = 0; m < 4; m++)
+	{
+		full[m] = atoi(temp[m]);
 	}
 	
-	return (full[0] * 256^3 + full[1] * 256^2 + full[2] * 256 + full[3]);
+	ret += full[0] * (256 * 256 * 256);
+	ret += full[1] * (256 * 256);
+	ret += full[2] * 256;
+	ret += full[3];
+
+	return ret; //*/
 }
 
 int main(int argc, char *argv[])
 {
-	int sd, n, nr, nw, pn, ip, i = 0;
-	char buf[BUF_SIZE], ipstr[15]; /*usrnm*/
-	struct sockaddr_in ser_addr;
+	int sd, n, nr, nw, pn, i = 0;
+	unsigned long ip;
+	char buf[BUF_SIZE], ipstr[16]; /*usrnm*/
+	struct sockaddr_in ser_addr;	
 
-
-	for(i = 0; i < 15; i++)
-	{
-		ipstr[i] = "\0";
-	}
-	
 	//If no port number, username or ip provided
-	if (argc == 4)
+	if (argc == 3)
 	{
 		pn = argv[1];
-		//ip = conviptodec(argv[2]);
+		ip = conviptodec(argv[2]);
 		//usrnm = argv[3];
 	}
 	else 
 	{
 		//Prompt for port number
-		printf("Port number: ");
+		printf("Port number: \n");
 		scanf("%d", &pn);
 		
 		//Prompt for ip address in A.B.C.D form -> ipstr
 		printf("IP number (in the form: A.B.C.D): \n");
-		fflush(stdin);
 		scanf("%s", ipstr);
-		fflush(stdin);
-		//fgets(ipstr, 15, stdin);
-		printf("------------------------------------------");
-		for(i = 0; i < 15; i++)
-		{
-			if(ipstr[i] == "\n")
-			{
-				ipstr[i] = "\0";
-			}
-		}
+		//fgets(ipstr, 16, stdin);
 		
 		ip = conviptodec(ipstr);
 		
 		//Prompt for desired username
 	}
 	
-	printf("ip in decimal form = %d \n", ip);
+	printf("ip in decimal form = %lu \n", ip);
   
 	/*Get host address and build a server socket address */
 	bzero((char *)&ser_addr, sizeof(ser_addr));

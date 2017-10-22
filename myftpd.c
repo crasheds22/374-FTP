@@ -35,8 +35,50 @@ void daemon_init(void)
 	
 	//Child continues
 	setsid(); 	//Become session leader
-	chdir("/"); //Change working directory
+	chdir("/"); 	//Change working directory
 	umask(0);	//Clear out file mode creation mask
+}
+
+unsigned long conviptodec(char addr[])
+{
+	//convert the ip string to a decimal number and return that number
+	char *piece;
+	char temp[4][4];
+
+	unsigned long full[4];
+	unsigned long ret = 0;
+	int i, j = 0, k = 0, m = 0;
+
+	
+
+	for(i = 0; i < strlen(addr); i++)
+	{
+		if(addr[i] == '.' || addr[i] == '\n')
+		{
+			for(j = m; j <= i; j++)
+			{
+				if(j == i)
+					temp[k][j - m] = '\0';
+				else
+					temp[k][j - m] = addr[j];
+			}
+ 			k++;
+			m = i + 1;
+		}
+	}
+
+	
+	for(m = 0; m < 4; m++)
+	{
+		full[m] = atoi(temp[m]);
+	}
+	
+	ret += full[0] * (256 * 256 * 256);
+	ret += full[1] * (256 * 256);
+	ret += full[2] * 256;
+	ret += full[3];
+
+	return ret; //*/
 }
 
 void reverse(char *s)
@@ -78,18 +120,25 @@ void serve_a_client(int sd)
 main(int argc, char *argv[])
 {
 	int sd, nsd, n, spn, sip, cli_addr_len;
-	pid_t, pid;
+	char sipstr[16];
+	pid_t pid;
 	struct sockaddr_in ser_addr, cli_addr;
 	
 	//Get port number from command line or user input
-	if(argc == 2)
+	if(argc == 3)
 	{
 		spn = argv[1];
+		sip = conviptodec(argv[2]);
 	}
 	else
 	{
 		printf("Enter a port number: ");
 		scanf("%d", &spn);
+
+		printf("Enter an ip address: ");
+		scanf("%s", sipstr);
+
+		sip = conviptodec(sipstr);
 	}
 	
 	//Turn the program into a daemon_init
@@ -102,14 +151,11 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	
-	//Get the ip address for the server to use
-	//ip-address = sip
-	
 	//Build server Internet socket address
 	bzero((char *)&ser_addr, sizeof(ser_addr));
 	ser_addr.sin_family = AF_INET;
-	ser_addr.sin_port = htons(spn);
-	ser_addr.sin_addr.s_addr = htonl(sip);
+	ser_addr.sin_port = htons((uint16_t)spn);
+	ser_addr.sin_addr.s_addr = htonl((uint32_t)sip);
 	
 	//bind server address to socket sd
 	if(bind(sd, (struct sockaddr *)&ser_addr, sizeof(ser_addr)) < 0)
