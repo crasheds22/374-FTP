@@ -9,17 +9,17 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <netinet/in.h>
 #include <errno.h>
-
+#include <unistd.h>
 #include <string.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #define BUF_SIZE	256
-
-int numChld = 0;
 
 void kill_zombies ()
 {
@@ -123,7 +123,6 @@ void serve_a_client(int sd)
 		//Read data from the client
 		if((nr = read(sd, buf, sizeof(buf))) <= 0)
 		{
-			numChld--;
 			//Connection broke down
 			exit(0);
 		}
@@ -133,18 +132,7 @@ void serve_a_client(int sd)
 
 		if(strcmp(buf, "kill") == 0) 
 		{
-			if(numChld == 1)
-			{
-				buf[0] = 'm';
-				nw = write(sd, buf, nr);
-				kill(getppid(), SIGTERM);
-				exit(0);
-			}
-			else
-			{
-				*buf = "denied";
-				nw = write(sd, buf, nr);
-			}
+			exit(0);
 		} 
 		else 
 		{
@@ -182,7 +170,6 @@ main(int argc, char *argv[])
 
 		sip = conviptodec(sipstr);
 	}
-	printf("%lu\n", sip);
 	
 	//Turn the program into a daemon_init
 	daemon_init();
@@ -237,8 +224,6 @@ main(int argc, char *argv[])
 		else if(pid > 0)
 		{
 			close(nsd);
-			numChld++;
-			printf("%d\n", numChld);
 			continue; //Parent to wait for next client
 		}
 		
@@ -247,4 +232,6 @@ main(int argc, char *argv[])
 		
 		serve_a_client(nsd);
 	}
+
+	exit(0);
 }

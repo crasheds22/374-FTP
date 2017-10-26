@@ -14,6 +14,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #define BUF_SIZE 		256
 
@@ -135,18 +136,8 @@ int main(int argc, char *argv[])
 		{
 
 			nw = write(sd, buf, nr);
-			
-			//Read from the socket to the buffer
-			nr = read(sd, buf, BUF_SIZE);
 
-			//Add in null terminator
-			buf[nr] = '\0';
-
-			//Print message to screen
-			printf("Server output[%d]: %s\n", i, buf);
-
-			if(strcmp(buf, "confirmed") == 0)
-				exit(0);
+			exit(0);
 		} 
 		else if(nr > 0)
 		{
