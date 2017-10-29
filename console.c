@@ -23,7 +23,7 @@ int main( int argc, char *argv[] )
 	char command[256];
 	char cmdfull[256];
 	char temp[256];
-	char cmdcd[3];
+	char cmd[4];
 	char currentdirectory[256];
   	int exit = 1;
 	int ret_val;
@@ -40,10 +40,6 @@ int main( int argc, char *argv[] )
 		{
 			command[strlen(command) - 1] = '\0';
 		}
-		printf("%s\n", command);
-		cmdcd[0] = command[0];
-		cmdcd[1] = command[1];
-		cmdcd[2] = '\0';
 
 		if(strcmp(command, "pwd") == 0)
 		{
@@ -89,7 +85,7 @@ int main( int argc, char *argv[] )
 			pclose(fp);
 
 		}
-		else if(strcmp(cmdcd, "cd") == 0 )
+		else if(strncmp(command, "cd", 2) == 0 )
 		{	
 			#ifdef _WIN32
 				if (strcmp(command, "cd") == 0)
@@ -101,22 +97,6 @@ int main( int argc, char *argv[] )
 			strcat(strcpy(temp, cmdfull), command);
 			ret_val = system(temp);
 			
-			//needed for server
-			//fp = popen(command, "r");
-			//if (fp == NULL) 
-			//{
-			//	printf("Failed to run command\n" );
-			//}
-
-			/* Read the output a line at a time - output it. */
-			//while (fgets(path, sizeof(path)-1, fp) != NULL) 
-			//{
-			//	send to client
-			//}
-
-			/* close */
-			//pclose(fp);
-
 			if(ret_val == 0)
 			{
 				#ifdef _WIN32
@@ -138,7 +118,33 @@ int main( int argc, char *argv[] )
 				strcpy(currentdirectory, path);
 				strcpy(cmdfull, strcat(strcat(strcpy(temp, "cd "), currentdirectory), " && "));
 			}
+			//else
+			//{
+				//needed for server
+				//fp = popen(command, "r");
+				//if (fp == NULL) 
+				//{
+				//	printf("Failed to run command\n" );
+				//}
+
+				/* Read the output a line at a time - output it. */
+				//while (fgets(path, sizeof(path)-1, fp) != NULL) 
+				//{
+				//	send to client
+				//}
+
+				/* close */
+				//pclose(fp);
+			//}
 			
+		}
+		else if(strncmp(command, "lcd", 3) == 0 )
+		{	
+			for(int i = 0; i < sizeof(command) - 1; i++)
+			{
+				temp[i] = command[i+1];
+			}
+			printf("%s\n", temp);
 		}
 		else if(strcmp(command, "quit") == 0)
 		{
