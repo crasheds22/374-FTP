@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define BUF_SIZE 		256
+#define BUF_SIZE 	256
 
 unsigned long conviptodec(char addr[])
 {
@@ -113,8 +113,10 @@ int main(int argc, char *argv[])
 	{
 		//Prompt user for input
 		printf("Client input[%d]: ", i);
+
 		//Read in a line
 		fgets(buf, BUF_SIZE, stdin);
+
 		//Get the length of the input
 		nr = strlen(buf);
 
@@ -131,14 +133,27 @@ int main(int argc, char *argv[])
 			printf("Bye from the client\n");
 			exit(0);
 		}
-
+		
 		if(strcmp(buf, "kill") == 0)
 		{
-
 			nw = write(sd, buf, nr);
 
+			printf("Bye from the client\n");
 			exit(0);
-		} 
+		}
+
+		if(strncmp(buf, "get", 3) == 0)
+		{
+			nw = write(sd, buf, nr);
+
+
+		}
+		else if(strncmp(buf, "put", 3) == 0)
+		{
+			nw = write(sd, buf, nr);
+
+
+		}	
 		else if(nr > 0)
 		{
 			//Write to the socket from the buffer

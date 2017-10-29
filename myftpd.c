@@ -20,6 +20,7 @@
 #include <stdio.h>
 
 #define BUF_SIZE	256
+#define MAXF		4096
 
 void kill_zombies ()
 {
@@ -97,7 +98,35 @@ unsigned long conviptodec(char addr[])
 	ret += full[2] * 256;
 	ret += full[3];
 
-	return ret; //*/
+	return ret;
+}
+
+//Copy files from src to destination
+void cp(char *src, char *dest)
+{
+	int to, from;
+	char buf[MAXF];
+	ssize_t nread;
+
+	if((to = open(dest, O_WRONLY | O_CREAT, 0777)) < 0)
+	{
+		perror("destination");
+		exit(1);
+	}
+
+	if((from = open(src, O_RDONLY)) < 0)
+	{
+		perror("source");
+		exit(1);
+	}
+
+	while((nread = read(from, buf, MAXF)) > 0)
+		write(to, buf, nread);
+
+	close(to);
+	close(from);
+	
+	return;
 }
 
 void reverse(char *s)
@@ -117,7 +146,7 @@ void serve_a_client(int sd)
 {
 	int nr, nw;
 	char buf[BUF_SIZE];
-	
+
 	while(1) 
 	{
 		//Read data from the client
@@ -132,8 +161,16 @@ void serve_a_client(int sd)
 
 		if(strcmp(buf, "kill") == 0) 
 		{
-			exit(0);
-		} 
+			kill(getppid(), SIGTERM);
+		}
+		else if(strncmp(buf, "get", 3) == 0)
+		{
+			
+		}
+		else if(strncmp(buf, "put", 3) == 0)
+		{
+
+		}
 		else 
 		{
 			reverse(buf);
@@ -144,7 +181,7 @@ void serve_a_client(int sd)
 	}
 }
 
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int sd, nsd, n, spn, sip, cli_addr_len;
 	char sipstr[16];
