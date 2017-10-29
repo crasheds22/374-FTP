@@ -191,9 +191,17 @@ void reverse(char *s)
 
 void serve_a_client(int sd)
 {
+	FILE *fp;
 	int nr, nw;
 	char buf[MAXF];
 	char *path;
+	char cmdfull[256];
+	char temp[256];	
+	char currentdirectory[256];
+	char temp2[1035];
+	char temp3[1035];
+	int ret_val;
+	strcpy(cmdfull, "cd && ");
 
 	while(1) 
 	{
@@ -206,8 +214,95 @@ void serve_a_client(int sd)
 		
 		//Process data
 		buf[nr] = '\0';
+		if(strcmp(buf, "pwd") == 0)
+		{	
+			#ifdef _WIN32
+				strcpy(buf, "cd");
+			#endif
+			strcat(strcpy(temp, cmdfull), buf);
+			
+			//system(temp);
+			fp = popen(temp, "r");
+			if (fp == NULL) 
+			{
+				printf("Failed to run command\n" );
+			}
+			strcpy(temp3, "");
+			strcpy(buf, "");	
+			fgets(temp3, sizeof(temp3)-1, fp );
+			if(temp3[strlen(temp3) - 1] == '\n')
+			{
+				temp3[strlen(temp3) - 1] = '\0';
+			}
+			
+			/* close */
+			pclose(fp);
+			nw = write(sd, temp3, strlen(temp3));
 
-		if(strcmp(buf, "kill") == 0) 
+		}
+		else if(strcmp(buf, "dir") == 0)
+		{
+			strcat(strcpy(temp, cmdfull), buf);
+			//system(temp);
+			fp = popen(temp, "r");
+			if (fp == NULL) 
+			{
+				printf("Failed to run command\n" );
+			}
+			strcpy(buf, "");
+			strcpy(temp2, "");
+			while (1) 
+			{
+				if(fgets(temp2, sizeof(temp2)-1, fp) != NULL)
+				{
+					strcat(buf, temp2);
+				}
+				else
+				{
+					strcat(buf, "\0");
+					break;
+				}
+			}
+
+			/* close */
+			pclose(fp);
+			nw = write(sd, buf, strlen(buf));
+		}
+		else if(strncmp(buf, "cd", 2) == 0 )
+		{	
+			#ifdef _WIN32
+				if (strcmp(buf, "cd") == 0)
+				{
+					strcpy(buf, "cd %userprofile%");
+				}
+			#endif
+			strcat(strcpy(temp, cmdfull), buf);
+			ret_val = system(temp);
+			if(ret_val == 0)
+			{
+				#ifdef _WIN32
+					strcat(temp, " && cd");
+				#else			
+					strcat(temp, " && pwd");
+				#endif
+				
+				fp = popen(temp, "r");
+				if (fp == NULL) 
+				{
+					printf("Error occured\n" );
+				}
+				strcpy(temp2, "");
+				fgets(temp2, sizeof(temp2)-1, fp);
+				if(temp2[strlen(temp2) - 1] == '\n')
+				{
+					temp2[strlen(temp2) - 1] = '\0';
+				}
+				strcpy(currentdirectory, temp2);
+				strcpy(cmdfull, strcat(strcat(strcpy(temp, "cd "), currentdirectory), " && "));
+				pclose(fp);
+			}
+		}
+		else if(strcmp(buf, "kill") == 0) 
 		{
 			kill(getppid(), SIGTERM);
 		}

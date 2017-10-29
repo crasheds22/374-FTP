@@ -20,6 +20,19 @@
 #define BUF_SIZE 	256
 #define MAXF		4096
 
+#ifdef _WIN32
+
+inline FILE* popen(const char* command, const char* type) 
+{
+   return _popen(command, type);
+}
+inline void pclose(FILE* file) 
+{ 
+   _pclose(file); 
+}
+
+#endif
+
 unsigned long conviptodec(char addr[])
 {
 	//convert the ip string to a decimal number and return that number
@@ -99,11 +112,19 @@ int cpsrc(char *src, char *buf)
 
 int main(int argc, char *argv[])
 {
+	FILE *fp;
 	int sd, n, nr, nw, pn, i = 0;
 	unsigned long ip;
 	char *path;
-	char buf[BUF_SIZE], ipstr[16]; /*usrnm*/
+	char buf[MAXF], ipstr[16]; /*usrnm*/
 	struct sockaddr_in ser_addr;
+	char cmdfull[256];
+	char temp[256];	
+	char currentdirectory[256];
+	char temp2[1035];
+	int ret_val;
+
+	strcpy(cmdfull, "cd && ");
 
 	//If no port number, username or ip provided
 	if (argc == 3)
@@ -180,8 +201,108 @@ int main(int argc, char *argv[])
 			printf("Bye from the client\n");
 			exit(0);
 		}
+		
+		if(strcmp(buf, "lpwd") == 0)
+		{	
+			strcpy(buf, "pwd");
+			#ifdef _WIN32
+				strcpy(buf, "cd");
+			#endif
+			strcat(strcpy(temp, cmdfull), buf);
+			
+			//system(temp);
+			fp = popen(temp, "r");
+			if (fp == NULL) 
+			{
+				printf("Failed to run command\n" );
+			}
 
-		if(strncmp(buf, "get", 3) == 0)
+			/* Read the output a line at a time - output it. */
+			while (fgets(temp2, sizeof(temp2)-1, fp) != NULL) 
+			{
+				printf("%s", temp2);
+			}
+
+			/* close */
+			pclose(fp);
+
+		}
+		else if(strcmp(buf, "ldir") == 0)
+		{
+			strcpy(buf, "dir");
+			strcat(strcpy(temp, cmdfull), buf);
+			//system(temp);
+			fp = popen(temp, "r");
+			if (fp == NULL) 
+			{
+				printf("Failed to run command\n" );
+			}
+
+			/* Read the output a line at a time - output it. */
+			while (fgets(temp2, sizeof(temp2)-1, fp) != NULL) 
+			{
+				printf("%s", temp2);
+			}
+
+			/* close */
+			pclose(fp);
+		}
+		else if(strncmp(buf, "lcd", 3) == 0 )
+		{	
+			for(int i = 0; i < sizeof(buf) - 1; i++)
+			{
+				buf[i] = buf[i+1];
+			}
+			#ifdef _WIN32
+				if (strcmp(buf, "cd") == 0)
+				{
+					strcpy(buf, "cd %userprofile%");
+				}
+			#endif
+			strcat(strcpy(temp, cmdfull), buf);
+			ret_val = system(temp);
+			if(ret_val == 0)
+			{
+				#ifdef _WIN32
+					strcat(temp, " && cd");
+				#else			
+					strcat(temp, " && pwd");
+				#endif
+				
+				fp = popen(temp, "r");
+				if (fp == NULL) 
+				{
+					printf("Error occured\n" );
+				}
+				fgets(temp2, sizeof(temp2)-1, fp);
+				if(temp2[strlen(temp2) - 1] == '\n')
+				{
+					temp2[strlen(temp2) - 1] = '\0';
+				}
+				strcpy(currentdirectory, temp2);
+				strcpy(cmdfull, strcat(strcat(strcpy(temp, "cd "), currentdirectory), " && "));
+				pclose(fp);
+			}
+		}
+		else if(strcmp(buf, "pwd") == 0)
+		{
+			nw = write(sd, buf, nr);
+			nr = read(sd, buf, MAXF);
+			printf("%s", buf);
+		}
+		else if(strcmp(buf, "dir") == 0)
+		{
+			nw = write(sd, buf, nr);
+			nr = read(sd, buf, MAXF);
+			printf("%s", buf);
+		}
+		else if(strncmp(buf, "cd", 2) == 0)
+		{
+			nw = write(sd, buf, nr);
+			nr = read(sd, buf, MAXF);
+			printf("%s", buf);
+		}
+		else if(strncmp(buf, "get", 3) == 0)
 		{
 			path = strtok(buf, " ");
 			while(path != NULL)
@@ -210,7 +331,7 @@ int main(int argc, char *argv[])
 			nw = write(sd, buf, nr);
 
 			//Read from the socket to the buffer
-			nr = read(sd, buf, BUF_SIZE);
+			nr = read(sd, buf, MAXF);
 
 			//Add in null terminator
 			buf[nr] = '\0';
