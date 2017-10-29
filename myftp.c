@@ -15,8 +15,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #define BUF_SIZE 	256
+#define MAXF		4096
 
 unsigned long conviptodec(char addr[])
 {
@@ -57,10 +59,49 @@ unsigned long conviptodec(char addr[])
 	return ret;
 }
 
+//Copy from buf to dest
+void cpdest(char *buf, char *dest)
+{
+	int to;
+	ssize_t nread;
+
+	if((to = open(dest, O_WRONLY | O_CREAT, 0777)) < 0)
+	{
+		perror("destination");
+		exit(1);
+	}
+
+	write(to, buf, nread);
+
+	close(to);
+	
+	return;
+}
+
+//Copy files from src to buf
+int cpsrc(char *src, char *buf)
+{
+	int to, from;
+	ssize_t nread;
+
+	if((from = open(src, O_RDONLY)) < 0)
+	{
+		perror("source");
+		exit(1);
+	}
+
+	nread = read(from, buf, MAXF);
+
+	close(from);
+	
+	return nread;
+}
+
 int main(int argc, char *argv[])
 {
 	int sd, n, nr, nw, pn, i = 0;
 	unsigned long ip;
+	char *path;
 	char buf[BUF_SIZE], ipstr[16]; /*usrnm*/
 	struct sockaddr_in ser_addr;
 
@@ -88,8 +129,6 @@ int main(int argc, char *argv[])
 
 		//Prompt for desired username
 	}
-
-	printf("ip in decimal form = %lu \n", ip);
 
 	/*Get host address and build a server socket address */
 	bzero((char *)&ser_addr, sizeof(ser_addr));
@@ -144,15 +183,26 @@ int main(int argc, char *argv[])
 
 		if(strncmp(buf, "get", 3) == 0)
 		{
+			path = strtok(buf, " ");
+			while(path != NULL)
+				path = strtok(NULL, " ");
+
 			nw = write(sd, buf, nr);
 
+			nr = read(sd, buf, MAXF);
 
+			cpdest(buf, path);
 		}
 		else if(strncmp(buf, "put", 3) == 0)
 		{
 			nw = write(sd, buf, nr);
 
+			path = strtok(buf, " ");
+			while(path != NULL)
+				path = strtok(NULL, " ");
 
+			nr = cpsrc(path, buf);		
+			nw = write(sd, buf, nr);
 		}	
 		else if(nr > 0)
 		{

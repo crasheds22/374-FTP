@@ -18,6 +18,43 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <fcntl.h>
+
+
+#ifdef _WIN32
+
+#include <io.h>
+#include <process.h>
+
+inline FILE* popen(const char* command, const char* type) 
+{
+	return _popen(command, type);
+}
+
+inline void pclose(FILE* file) 
+{ 
+	_pclose(file); 
+}
+
+inline int open(const char* path, int oflag)
+{
+	return _open(path, oflag);
+}
+
+inline int open(const char* path, int oflag, mode_t mode)
+{
+	return _open(path, oflag, mode);
+}
+
+inline int close(int filedescriptor)
+{
+	return _close(filedescriptor);
+}
+
+#else
+//Unix includes
+
+#endif
 
 #define BUF_SIZE	256
 #define MAXF		4096
@@ -101,11 +138,29 @@ unsigned long conviptodec(char addr[])
 	return ret;
 }
 
-//Copy files from src to destination
-void cp(char *src, char *dest)
+//Copy files from src to buf
+int cpsrc(char *src, char *buf)
 {
-	int to, from;
-	char buf[MAXF];
+	int from;
+	ssize_t nread;
+
+	if((from = open(src, O_RDONLY)) < 0)
+	{
+		perror("source");
+		exit(1);
+	}
+
+	nread = read(from, buf, MAXF);
+
+	close(from);
+	
+	return nread;
+}
+
+//Copy from buf to dest
+void cpdest(char *buf, char *dest)
+{
+	int to;
 	ssize_t nread;
 
 	if((to = open(dest, O_WRONLY | O_CREAT, 0777)) < 0)
@@ -114,17 +169,9 @@ void cp(char *src, char *dest)
 		exit(1);
 	}
 
-	if((from = open(src, O_RDONLY)) < 0)
-	{
-		perror("source");
-		exit(1);
-	}
-
-	while((nread = read(from, buf, MAXF)) > 0)
-		write(to, buf, nread);
+	write(to, buf, nread);
 
 	close(to);
-	close(from);
 	
 	return;
 }
@@ -145,7 +192,8 @@ void reverse(char *s)
 void serve_a_client(int sd)
 {
 	int nr, nw;
-	char buf[BUF_SIZE];
+	char buf[MAXF];
+	char *path;
 
 	while(1) 
 	{
@@ -165,11 +213,28 @@ void serve_a_client(int sd)
 		}
 		else if(strncmp(buf, "get", 3) == 0)
 		{
-			
+			path = strtok(buf, " ");
+			while(path != NULL)
+				path = strtok(NULL, " ");
+
+			nr = cpsrc(path, buf);
+
+			nw = write(sd, buf, nr);
 		}
 		else if(strncmp(buf, "put", 3) == 0)
 		{
+			path = strtok(buf, " ");
+			while(path != NULL)
+				path = strtok(NULL, " ");
 
+			while(1){
+				nr = read(sd, buf, sizeof(buf));
+				if(strncmp(buf, "put", 3) != 0)
+				{
+					cpdest(buf, path);
+					break;
+				}
+			}
 		}
 		else 
 		{
