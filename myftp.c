@@ -139,11 +139,12 @@ int main(int argc, char *argv[])
 	{
 		//Prompt for port number
 		printf("Port number: \n");
-		scanf("%d", &pn);
+		fgets(temp, sizeof(temp), stdin);
+		pn = atoi(temp);
 
 		//Prompt for ip address in A.B.C.D form -> ipstr
 		printf("IP number (in the form: A.B.C.D): \n");
-		scanf("%s", ipstr);
+		fgets(ipstr, 16, stdin);
 		ipstr[strlen(ipstr)] = '.';
 
 		ip = conviptodec(ipstr);
@@ -287,20 +288,30 @@ int main(int argc, char *argv[])
 		else if(strcmp(buf, "pwd") == 0)
 		{
 			nw = write(sd, buf, nr);
+			memset(buf, 0, sizeof(buf));
 			nr = read(sd, buf, MAXF);
+			buf[strlen(buf)] = '\0';
 			printf("%s", buf);
 		}
 		else if(strcmp(buf, "dir") == 0)
 		{
 			nw = write(sd, buf, nr);
+			memset(buf, 0, sizeof(buf));
 			nr = read(sd, buf, MAXF);
-			printf("%s", buf);
+			buf[strlen(buf)] = '\0';
+			printf("%s", buf);	
 		}
 		else if(strncmp(buf, "cd", 2) == 0)
 		{
+			strcpy(temp, buf);
 			nw = write(sd, buf, nr);
+			memset(buf, 0, sizeof(buf));
 			nr = read(sd, buf, MAXF);
-			printf("%s", buf);
+			if(strcmp(buf, temp) != 0)
+			{
+				buf[strlen(buf)] = '\0';
+				printf("%s", buf);
+			}
 		}
 		else if(strncmp(buf, "get", 3) == 0)
 		{
@@ -334,7 +345,7 @@ int main(int argc, char *argv[])
 			nr = read(sd, buf, MAXF);
 
 			//Add in null terminator
-			buf[nr] = '\0';
+			buf[strlen(buf)] = '\0';
 
 			//Print message to screen
 			printf("Server output[%d]: %s\n", i, buf);

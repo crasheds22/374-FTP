@@ -200,8 +200,10 @@ void serve_a_client(int sd)
 	char currentdirectory[256];
 	char temp2[1035];
 	char temp3[1035];
+	char echo[1035];
 	int ret_val;
 	strcpy(cmdfull, "cd && ");
+	strcpy(echo, "echo ");
 
 	while(1) 
 	{
@@ -220,53 +222,38 @@ void serve_a_client(int sd)
 				strcpy(buf, "cd");
 			#endif
 			strcat(strcpy(temp, cmdfull), buf);
-			
-			//system(temp);
 			fp = popen(temp, "r");
 			if (fp == NULL) 
 			{
 				printf("Failed to run command\n" );
 			}
-			strcpy(temp3, "");
-			strcpy(buf, "");	
-			fgets(temp3, sizeof(temp3)-1, fp );
-			if(temp3[strlen(temp3) - 1] == '\n')
+			memset(buf, 0, sizeof(buf));
+			memset(temp2, 0, sizeof(temp2));
+			while (fgets(temp2, sizeof(temp2)-1, fp) != NULL) 
 			{
-				temp3[strlen(temp3) - 1] = '\0';
+				strcat(buf, temp2);
 			}
-			
-			/* close */
 			pclose(fp);
-			nw = write(sd, temp3, strlen(temp3));
-
+			nw = write(sd, buf, strlen(buf));
 		}
 		else if(strcmp(buf, "dir") == 0)
 		{
 			strcat(strcpy(temp, cmdfull), buf);
-			//system(temp);
 			fp = popen(temp, "r");
 			if (fp == NULL) 
 			{
 				printf("Failed to run command\n" );
 			}
-			strcpy(buf, "");
-			strcpy(temp2, "");
-			while (1) 
+			memset(buf, 0, sizeof(buf));
+			memset(temp2, 0, sizeof(temp2));
+			while (fgets(temp2, sizeof(temp2)-1, fp) != NULL) 
 			{
-				if(fgets(temp2, sizeof(temp2)-1, fp) != NULL)
-				{
-					strcat(buf, temp2);
-				}
-				else
-				{
-					strcat(buf, "\0");
-					break;
-				}
+				strcat(buf, temp2);
 			}
-
-			/* close */
 			pclose(fp);
 			nw = write(sd, buf, strlen(buf));
+			
+			
 		}
 		else if(strncmp(buf, "cd", 2) == 0 )
 		{	
@@ -278,6 +265,19 @@ void serve_a_client(int sd)
 			#endif
 			strcat(strcpy(temp, cmdfull), buf);
 			ret_val = system(temp);
+
+			fp = popen(temp, "r");
+			if (fp == NULL) 
+			{
+				printf("Error occured\n" );
+			}
+			fgets(buf, sizeof(buf)-1, fp);
+			if(buf[strlen(buf) - 1] == '\n')
+			{
+				buf[strlen(buf) - 1] = '\0';
+			}
+			pclose(fp);
+
 			if(ret_val == 0)
 			{
 				#ifdef _WIN32
@@ -291,7 +291,6 @@ void serve_a_client(int sd)
 				{
 					printf("Error occured\n" );
 				}
-				strcpy(temp2, "");
 				fgets(temp2, sizeof(temp2)-1, fp);
 				if(temp2[strlen(temp2) - 1] == '\n')
 				{
@@ -301,6 +300,7 @@ void serve_a_client(int sd)
 				strcpy(cmdfull, strcat(strcat(strcpy(temp, "cd "), currentdirectory), " && "));
 				pclose(fp);
 			}
+			nw = write(sd, buf, strlen(buf));
 		}
 		else if(strcmp(buf, "kill") == 0) 
 		{
