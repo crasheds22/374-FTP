@@ -73,49 +73,35 @@ unsigned long conviptodec(char addr[])
 }
 
 //Copy from buf to dest
-void cpdest(char *buf, char *dest)
+void cpdest(char buf[], char dest[])
 {
-	int to;
-	ssize_t nread;
-
-	if((to = open(dest, O_WRONLY | O_CREAT, 0777)) < 0)
-	{
-		perror("destination");
-		exit(1);
-	}
-
-	write(to, buf, nread);
-
-	close(to);
-	
-	return;
+	FILE *f = fopen(dest, "wb");
+	fputs(buf, f);
+	fclose(f);
 }
 
 //Copy files from src to buf
-int cpsrc(char *src, char *buf)
+void cpsrc(char src[], char buf[])
 {
-	int to, from;
-	ssize_t nread;
+	long fsize;	
+	FILE *f =fopen(src, "rb");
+	fseek(f, 0, SEEK_END);
+	fsize = ftell(f);
+	fseek(f, 0, SEEK_SET);
 
-	if((from = open(src, O_RDONLY)) < 0)
-	{
-		perror("source");
-		exit(1);
-	}
-
-	nread = read(from, buf, MAXF);
-
-	close(from);
-	
-	return nread;
+	fread(buf, fsize, 1, f);
+	fclose(f);
+	buf[fsize] = 0;
 }
 
 int main(int argc, char *argv[])
 {
 	FILE *fp;
 	int sd, n, nr, nw, pn, i = 0;
+	int filenamepoint;
 	unsigned long ip;
-	char *path;
+	char path[256];
+	char filename[256];
 	char buf[MAXF], ipstr[16]; /*usrnm*/
 	struct sockaddr_in ser_addr;
 	char cmdfull[256];
@@ -226,6 +212,7 @@ int main(int argc, char *argv[])
 
 			/* close */
 			pclose(fp);
+			memset(buf, 0, sizeof(buf));
 
 		}
 		else if(strcmp(buf, "ldir") == 0)
@@ -247,10 +234,11 @@ int main(int argc, char *argv[])
 
 			/* close */
 			pclose(fp);
+			memset(buf, 0, sizeof(buf));
 		}
 		else if(strncmp(buf, "lcd", 3) == 0 )
 		{	
-			for(int i = 0; i < sizeof(buf) - 1; i++)
+			for(int i = 0; i < strlen(buf); i++)
 			{
 				buf[i] = buf[i+1];
 			}
@@ -284,6 +272,7 @@ int main(int argc, char *argv[])
 				strcpy(cmdfull, strcat(strcat(strcpy(temp, "cd "), currentdirectory), " && "));
 				pclose(fp);
 			}
+			memset(buf, 0, sizeof(buf));
 		}
 		else if(strcmp(buf, "pwd") == 0)
 		{
@@ -292,6 +281,7 @@ int main(int argc, char *argv[])
 			nr = read(sd, buf, MAXF);
 			buf[strlen(buf)] = '\0';
 			printf("%s", buf);
+			memset(buf, 0, sizeof(buf));
 		}
 		else if(strcmp(buf, "dir") == 0)
 		{
@@ -299,7 +289,8 @@ int main(int argc, char *argv[])
 			memset(buf, 0, sizeof(buf));
 			nr = read(sd, buf, MAXF);
 			buf[strlen(buf)] = '\0';
-			printf("%s", buf);	
+			printf("%s", buf);
+			memset(buf, 0, sizeof(buf));	
 		}
 		else if(strncmp(buf, "cd", 2) == 0)
 		{
@@ -312,43 +303,40 @@ int main(int argc, char *argv[])
 				buf[strlen(buf)] = '\0';
 				printf("%s", buf);
 			}
+			memset(buf, 0, sizeof(buf));
 		}
-		else if(strncmp(buf, "get", 3) == 0)
+		else if(strncmp(buf, "get ", 4) == 0)
 		{
-			path = strtok(buf, " ");
-			while(path != NULL)
-				path = strtok(NULL, " ");
-
+			memset(filename, 0, sizeof(filename));
+			for(int i = 0; i < strlen(buf) - 3; i++)
+			{
+				filename[i] = buf[i + 4];
+			}
+			strcat(strcat(strcpy(path, currentdirectory), "/"), filename); 	
+			
 			nw = write(sd, buf, nr);
 
 			nr = read(sd, buf, MAXF);
-
 			cpdest(buf, path);
+			memset(buf, 0, sizeof(buf));
 		}
-		else if(strncmp(buf, "put", 3) == 0)
+		else if(strncmp(buf, "put ", 4) == 0)
 		{
-			nw = write(sd, buf, nr);
-
-			path = strtok(buf, " ");
-			while(path != NULL)
-				path = strtok(NULL, " ");
-
-			nr = cpsrc(path, buf);		
-			nw = write(sd, buf, nr);
-		}	
-		else if(nr > 0)
-		{
-			//Write to the socket from the buffer
-			nw = write(sd, buf, nr);
-
-			//Read from the socket to the buffer
+			memset(filename, 0, sizeof(filename));
+			nw = write(sd, buf, strlen(buf));
+			memset(buf, 0, sizeof(buf));
 			nr = read(sd, buf, MAXF);
-
-			//Add in null terminator
-			buf[strlen(buf)] = '\0';
-
-			//Print message to screen
-			printf("Server output[%d]: %s\n", i, buf);
+			strcpy(filename, buf);
+			strcat(strcat(strcpy(path, currentdirectory), "/"), filename); 
+			memset(buf, 0, sizeof(buf));
+			cpsrc(path, buf);
+			nw = write(sd, buf, strlen(buf));	
+			memset(buf, 0, sizeof(buf));	
+		}	
+		else
+		{
+			printf("unknown command\n");
 		}
+
 	}
 }

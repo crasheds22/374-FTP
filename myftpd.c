@@ -138,55 +138,26 @@ unsigned long conviptodec(char addr[])
 	return ret;
 }
 
-//Copy files from src to buf
-int cpsrc(char *src, char *buf)
-{
-	int from;
-	ssize_t nread;
-
-	if((from = open(src, O_RDONLY)) < 0)
-	{
-		perror("source");
-		exit(1);
-	}
-
-	nread = read(from, buf, MAXF);
-
-	close(from);
-	
-	return nread;
-}
-
 //Copy from buf to dest
-void cpdest(char *buf, char *dest)
+void cpdest(char buf[], char dest[])
 {
-	int to;
-	ssize_t nread;
-
-	if((to = open(dest, O_WRONLY | O_CREAT, 0777)) < 0)
-	{
-		perror("destination");
-		exit(1);
-	}
-
-	write(to, buf, nread);
-
-	close(to);
-	
-	return;
+	FILE *f = fopen(dest, "wb");
+	fputs(buf, f);
+	fclose(f);
 }
 
-void reverse(char *s)
+//Copy files from src to buf
+void cpsrc(char src[], char buf[])
 {
-	char c;
-	int i, j = strlen(s);
-	
-	for(i = 0, j = strlen(s) - 1; i < j; i++, j--)
-	{
-		c = s[i];
-		s[i] = s[j];
-		s[j] = c;
-	}
+	long fsize;	
+	FILE *f =fopen(src, "rb");
+	fseek(f, 0, SEEK_END);
+	fsize = ftell(f);
+	fseek(f, 0, SEEK_SET);
+
+	fread(buf, fsize, 1, f);
+	fclose(f);
+	buf[fsize] = 0;
 }
 
 void serve_a_client(int sd)
@@ -194,14 +165,17 @@ void serve_a_client(int sd)
 	FILE *fp;
 	int nr, nw;
 	char buf[MAXF];
-	char *path;
+	char path[256];
+	char filename[256];
 	char cmdfull[256];
-	char temp[256];	
+	char temp[256];
+	char username[256];	
 	char currentdirectory[256];
 	char temp2[1035];
 	char temp3[1035];
 	char echo[1035];
 	int ret_val;
+	int newfile = 0;
 	strcpy(cmdfull, "cd && ");
 	strcpy(echo, "echo ");
 
@@ -235,6 +209,7 @@ void serve_a_client(int sd)
 			}
 			pclose(fp);
 			nw = write(sd, buf, strlen(buf));
+			memset(buf, 0, sizeof(buf));
 		}
 		else if(strcmp(buf, "dir") == 0)
 		{
@@ -252,7 +227,7 @@ void serve_a_client(int sd)
 			}
 			pclose(fp);
 			nw = write(sd, buf, strlen(buf));
-			
+			memset(buf, 0, sizeof(buf));
 			
 		}
 		else if(strncmp(buf, "cd", 2) == 0 )
@@ -301,6 +276,7 @@ void serve_a_client(int sd)
 				pclose(fp);
 			}
 			nw = write(sd, buf, strlen(buf));
+			memset(buf, 0, sizeof(buf));
 		}
 		else if(strcmp(buf, "kill") == 0) 
 		{
@@ -308,35 +284,42 @@ void serve_a_client(int sd)
 		}
 		else if(strncmp(buf, "get", 3) == 0)
 		{
-			path = strtok(buf, " ");
-			while(path != NULL)
-				path = strtok(NULL, " ");
+			memset(filename, 0, sizeof(filename));
+			for(int i = 0; i < strlen(buf) - 3; i++)
+			{
+				filename[i] = buf[i + 4];
+			}
+			strcat(strcat(strcpy(path, currentdirectory), "/"), filename); 	
 
-			nr = cpsrc(path, buf);
-
-			nw = write(sd, buf, nr);
+			cpsrc(path, buf);
+			nw = write(sd, buf, strlen(buf));
+			memset(buf, 0, sizeof(buf));
 		}
 		else if(strncmp(buf, "put", 3) == 0)
-		{
-			path = strtok(buf, " ");
-			while(path != NULL)
-				path = strtok(NULL, " ");
-
-			while(1){
-				nr = read(sd, buf, sizeof(buf));
-				if(strncmp(buf, "put", 3) != 0)
-				{
-					cpdest(buf, path);
-					break;
-				}
+		{	
+			memset(filename, 0, sizeof(filename));
+			for(int i = 0; i < strlen(buf) - 3; i++)
+			{
+				filename[i] = buf[i + 4];
 			}
-		}
-		else 
-		{
-			reverse(buf);
-		
-			//Send results to the client
-			nw = write(sd, buf, nr);
+			strcat(strcat(strcpy(path, currentdirectory), "/"), filename); 
+			nw = write(sd, filename, strlen(filename));
+			while(newfile == 0)
+			{
+				memset(buf, 0, sizeof(buf));
+				nr = read(sd, buf, MAXF);
+				if(strcmp(buf, filename) == 0)
+				{
+					newfile = 0;
+				}
+				else
+				{
+					newfile = 1;
+					cpdest(buf, path);
+				}
+			}		
+			
+			memset(buf, 0, sizeof(buf));			
 		}
 	}
 }
