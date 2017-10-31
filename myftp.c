@@ -113,7 +113,16 @@ int main(int argc, char *argv[])
 	char filesizestr[256];
 	int ret_val;
 
-	strcpy(cmdfull, "cd && ");
+	fp = popen("cd && pwd", "r"); 
+	fgets(temp2, sizeof(temp2)-1, fp);
+	if(temp2[strlen(temp2) - 1] == '\n')
+	{
+		temp2[strlen(temp2) - 1] = '\0';
+	}
+	strcpy(currentdirectory, temp2);
+	strcpy(cmdfull, strcat(strcat(strcpy(temp, "cd "), currentdirectory), " && \0"));
+	memset(buf, 0, sizeof(buf));
+	memset(temp2, 0, sizeof(temp2));
 
 	//If no port number, username or ip provided
 	if (argc == 3)
@@ -272,7 +281,7 @@ int main(int argc, char *argv[])
 					temp2[strlen(temp2) - 1] = '\0';
 				}
 				strcpy(currentdirectory, temp2);
-				strcpy(cmdfull, strcat(strcat(strcpy(temp, "cd "), currentdirectory), " && "));
+				strcpy(cmdfull, strcat(strcat(strcpy(temp, "cd "), currentdirectory), " && \0"));
 				pclose(fp);
 			}
 			memset(buf, 0, sizeof(buf));

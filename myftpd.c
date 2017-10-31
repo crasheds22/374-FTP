@@ -161,7 +161,7 @@ int cpsrc(char src[], char buf[])
 	return(fsize);
 }
 
-void serve_a_client(int sd)
+void serve_a_client(int sd, char initdir[])
 {
 	FILE *fp;
 	int nr, nw;
@@ -176,7 +176,21 @@ void serve_a_client(int sd)
 	char filesizestr[256];
 	int ret_val;
 	long filesize;
-	strcpy(cmdfull, "cd && ");
+
+	fp = popen("cd && pwd", "r"); 
+	fgets(temp2, sizeof(temp2)-1, fp);
+	if(temp2[strlen(temp2) - 1] == '\n')
+	{
+		temp2[strlen(temp2) - 1] = '\0';
+	}
+	strcpy(currentdirectory, temp2);
+	if(strcmp(initdir, "") != 0)
+	{
+		strcat(strcat(currentdirectory, "/"), initdir);
+	}
+	strcpy(cmdfull, strcat(strcat(strcpy(temp, "cd "), currentdirectory), " && \0"));
+	memset(buf, 0, sizeof(buf));
+	memset(temp2, 0, sizeof(temp2));
 
 	while(1) 
 	{
@@ -271,7 +285,7 @@ void serve_a_client(int sd)
 					temp2[strlen(temp2) - 1] = '\0';
 				}
 				strcpy(currentdirectory, temp2);
-				strcpy(cmdfull, strcat(strcat(strcpy(temp, "cd "), currentdirectory), " && "));
+				strcpy(cmdfull, strcat(strcat(strcpy(temp, "cd "), currentdirectory), " && \0"));
 				pclose(fp);
 			}
 			nw = write(sd, buf, strlen(buf));
@@ -320,16 +334,18 @@ int main(int argc, char *argv[])
 {
 	int sd, nsd, n, spn, sip, cli_addr_len;
 	char sipstr[16];
+	char initdir[256];
 	pid_t pid;
 	struct sockaddr_in ser_addr, cli_addr;
 	
 	//Get port number from command line or user input
-	if(argc == 3)
+	if(argc == 4)
 	{
-		spn = argv[1];
+		strcpy(initdir, argv[1]);
+		spn = argv[2];
 
-		argv[2][strlen(argv[2])] = '.';
-		sip = conviptodec(argv[2]);
+		argv[3][strlen(argv[3])] = '.';
+		sip = conviptodec(argv[3]);
 	}
 	else
 	{
@@ -341,6 +357,7 @@ int main(int argc, char *argv[])
 		sipstr[strlen(sipstr)] = '.';
 
 		sip = conviptodec(sipstr);
+		strcpy(initdir, "");
 	}
 	
 	//Turn the program into a daemon_init
@@ -402,7 +419,7 @@ int main(int argc, char *argv[])
 		//Now in child, server the current client
 		close(sd);
 		
-		serve_a_client(nsd);
+		serve_a_client(nsd, initdir);
 	}
 
 	exit(0);
