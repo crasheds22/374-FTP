@@ -18,7 +18,7 @@
 #include <fcntl.h>
 
 #define BUF_SIZE 	256
-#define MAXF		4096
+#define MAXF		10240
 
 #ifdef _WIN32
 
@@ -73,15 +73,15 @@ unsigned long conviptodec(char addr[])
 }
 
 //Copy from buf to dest
-void cpdest(char buf[], char dest[])
+void cpdest(char buf[], char dest[], long filesize)
 {
 	FILE *f = fopen(dest, "wb");
-	fputs(buf, f);
+	fwrite(buf, filesize, 1, f);
 	fclose(f);
 }
 
 //Copy files from src to buf
-void cpsrc(char src[], char buf[])
+int cpsrc(char src[], char buf[])
 {
 	long fsize;	
 	FILE *f =fopen(src, "rb");
@@ -92,6 +92,7 @@ void cpsrc(char src[], char buf[])
 	fread(buf, fsize, 1, f);
 	fclose(f);
 	buf[fsize] = 0;
+	return(fsize);
 }
 
 int main(int argc, char *argv[])
@@ -108,6 +109,8 @@ int main(int argc, char *argv[])
 	char temp[256];	
 	char currentdirectory[256];
 	char temp2[1035];
+	long filesize;
+	char filesizestr[256];
 	int ret_val;
 
 	strcpy(cmdfull, "cd && ");
@@ -315,9 +318,12 @@ int main(int argc, char *argv[])
 			strcat(strcat(strcpy(path, currentdirectory), "/"), filename); 	
 			
 			nw = write(sd, buf, nr);
-
+			memset(buf, 0, sizeof(buf));
 			nr = read(sd, buf, MAXF);
-			cpdest(buf, path);
+			filesize = atol(buf);
+			memset(buf, 0, sizeof(buf));
+			nr = read(sd, buf, MAXF);
+			cpdest(buf, path, filesize);
 			memset(buf, 0, sizeof(buf));
 		}
 		else if(strncmp(buf, "put ", 4) == 0)
@@ -329,13 +335,15 @@ int main(int argc, char *argv[])
 			strcpy(filename, buf);
 			strcat(strcat(strcpy(path, currentdirectory), "/"), filename); 
 			memset(buf, 0, sizeof(buf));
-			cpsrc(path, buf);
-			nw = write(sd, buf, strlen(buf));	
+			filesize = cpsrc(path, buf);
+			sprintf(filesizestr, "%lu", filesize);
+			nw = write(sd, filesizestr, strlen(filesizestr));
+			nw = write(sd, buf, filesize);	
 			memset(buf, 0, sizeof(buf));	
 		}	
 		else
 		{
-			printf("unknown command\n");
+			printf("Invalid command\n");
 		}
 
 	}

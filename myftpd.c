@@ -57,7 +57,7 @@ inline int close(int filedescriptor)
 #endif
 
 #define BUF_SIZE	256
-#define MAXF		4096
+#define MAXF		10240
 
 void kill_zombies ()
 {
@@ -139,15 +139,15 @@ unsigned long conviptodec(char addr[])
 }
 
 //Copy from buf to dest
-void cpdest(char buf[], char dest[])
+void cpdest(char buf[], char dest[], long filesize)
 {
 	FILE *f = fopen(dest, "wb");
-	fputs(buf, f);
+	fwrite(buf, filesize, 1, f);
 	fclose(f);
 }
 
 //Copy files from src to buf
-void cpsrc(char src[], char buf[])
+int cpsrc(char src[], char buf[])
 {
 	long fsize;	
 	FILE *f =fopen(src, "rb");
@@ -158,6 +158,7 @@ void cpsrc(char src[], char buf[])
 	fread(buf, fsize, 1, f);
 	fclose(f);
 	buf[fsize] = 0;
+	return(fsize);
 }
 
 void serve_a_client(int sd)
@@ -172,12 +173,10 @@ void serve_a_client(int sd)
 	char username[256];	
 	char currentdirectory[256];
 	char temp2[1035];
-	char temp3[1035];
-	char echo[1035];
+	char filesizestr[256];
 	int ret_val;
-	int newfile = 0;
+	long filesize;
 	strcpy(cmdfull, "cd && ");
-	strcpy(echo, "echo ");
 
 	while(1) 
 	{
@@ -290,10 +289,12 @@ void serve_a_client(int sd)
 				filename[i] = buf[i + 4];
 			}
 			strcat(strcat(strcpy(path, currentdirectory), "/"), filename); 	
-
-			cpsrc(path, buf);
-			nw = write(sd, buf, strlen(buf));
 			memset(buf, 0, sizeof(buf));
+			filesize = cpsrc(path, buf);
+			sprintf(filesizestr, "%lu", filesize);
+			nw = write(sd, filesizestr, strlen(filesizestr));
+			nw = write(sd, buf, filesize);	
+			memset(buf, 0, sizeof(buf));	
 		}
 		else if(strncmp(buf, "put", 3) == 0)
 		{	
@@ -304,21 +305,12 @@ void serve_a_client(int sd)
 			}
 			strcat(strcat(strcpy(path, currentdirectory), "/"), filename); 
 			nw = write(sd, filename, strlen(filename));
-			while(newfile == 0)
-			{
-				memset(buf, 0, sizeof(buf));
-				nr = read(sd, buf, MAXF);
-				if(strcmp(buf, filename) == 0)
-				{
-					newfile = 0;
-				}
-				else
-				{
-					newfile = 1;
-					cpdest(buf, path);
-				}
-			}		
-			
+			memset(buf, 0, sizeof(buf));
+			nr = read(sd, buf, MAXF);
+			filesize = atol(buf);
+			memset(buf, 0, sizeof(buf));
+			nr = read(sd, buf, MAXF);
+			cpdest(buf, path, filesize);
 			memset(buf, 0, sizeof(buf));			
 		}
 	}
