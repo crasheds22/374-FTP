@@ -149,16 +149,23 @@ void cpdest(char buf[], char dest[], long filesize)
 //Copy files from src to buf
 int cpsrc(char src[], char buf[])
 {
-	long fsize;	
-	FILE *f =fopen(src, "rb");
-	fseek(f, 0, SEEK_END);
-	fsize = ftell(f);
-	fseek(f, 0, SEEK_SET);
+	long fsize;
+	FILE *f;	
+	if ((f = fopen(src, "rb")) == NULL)
+	{
+		printf("Error! opening file");     
+	}
+	else
+	{
+		fseek(f, 0, SEEK_END);
+		fsize = ftell(f);
+		fseek(f, 0, SEEK_SET);
 
-	fread(buf, fsize, 1, f);
-	fclose(f);
-	buf[fsize] = 0;
-	return(fsize);
+		fread(buf, fsize, 1, f);
+		fclose(f);
+		buf[fsize] = 0;
+		return(fsize);
+	}
 }
 
 void serve_a_client(int sd, char initdir[])
@@ -177,6 +184,15 @@ void serve_a_client(int sd, char initdir[])
 	int ret_val;
 	long filesize;
 
+	memset(path, 0, sizeof(path));
+	memset(filename, 0, sizeof(filename));
+	memset(cmdfull, 0, sizeof(cmdfull));
+	memset(temp, 0, sizeof(temp));
+	memset(currentdirectory, 0, sizeof(currentdirectory));
+	memset(temp2, 0, sizeof(temp2));
+	memset(filesizestr, 0, sizeof(filesizestr));
+	memset(buf, 0, sizeof(buf));
+
 	fp = popen("cd && pwd", "r"); 
 	fgets(temp2, sizeof(temp2)-1, fp);
 	if(temp2[strlen(temp2) - 1] == '\n')
@@ -191,6 +207,7 @@ void serve_a_client(int sd, char initdir[])
 	strcpy(cmdfull, strcat(strcat(strcpy(temp, "cd "), currentdirectory), " && \0"));
 	memset(buf, 0, sizeof(buf));
 	memset(temp2, 0, sizeof(temp2));
+	pclose(fp);
 
 	while(1) 
 	{
@@ -307,6 +324,7 @@ void serve_a_client(int sd, char initdir[])
 			filesize = cpsrc(path, buf);
 			sprintf(filesizestr, "%lu", filesize);
 			nw = write(sd, filesizestr, strlen(filesizestr));
+			nr = read(sd, filename, strlen(filename));
 			nw = write(sd, buf, filesize);	
 			memset(buf, 0, sizeof(buf));	
 		}
@@ -339,7 +357,19 @@ int main(int argc, char *argv[])
 	struct sockaddr_in ser_addr, cli_addr;
 	
 	//Get port number from command line or user input
-	if(argc == 4)
+	if(argc == 2)
+	{
+		strcpy(initdir, argv[1]);
+		printf("Enter a port number: ");
+		scanf("%d", &spn);
+
+		printf("Enter an ip address: ");
+		scanf("%s", sipstr);
+		sipstr[strlen(sipstr)] = '.';
+
+		sip = conviptodec(sipstr);
+	}
+	else if(argc == 4)
 	{
 		strcpy(initdir, argv[1]);
 		spn = argv[2];

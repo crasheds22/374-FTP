@@ -83,16 +83,23 @@ void cpdest(char buf[], char dest[], long filesize)
 //Copy files from src to buf
 int cpsrc(char src[], char buf[])
 {
-	long fsize;	
-	FILE *f =fopen(src, "rb");
-	fseek(f, 0, SEEK_END);
-	fsize = ftell(f);
-	fseek(f, 0, SEEK_SET);
+	long fsize;
+	FILE *f;	
+	if ((f = fopen(src, "rb")) == NULL)
+	{
+		printf("Error! opening file");     
+	}
+	else
+	{
+		fseek(f, 0, SEEK_END);
+		fsize = ftell(f);
+		fseek(f, 0, SEEK_SET);
 
-	fread(buf, fsize, 1, f);
-	fclose(f);
-	buf[fsize] = 0;
-	return(fsize);
+		fread(buf, fsize, 1, f);
+		fclose(f);
+		buf[fsize] = 0;
+		return(fsize);
+	}
 }
 
 int main(int argc, char *argv[])
@@ -113,6 +120,15 @@ int main(int argc, char *argv[])
 	char filesizestr[256];
 	int ret_val;
 
+	memset(path, 0, sizeof(path));
+	memset(filename, 0, sizeof(filename));
+	memset(cmdfull, 0, sizeof(cmdfull));
+	memset(temp, 0, sizeof(temp));
+	memset(currentdirectory, 0, sizeof(currentdirectory));
+	memset(temp2, 0, sizeof(temp2));
+	memset(filesizestr, 0, sizeof(filesizestr));
+	memset(buf, 0, sizeof(buf));
+
 	fp = popen("cd && pwd", "r"); 
 	fgets(temp2, sizeof(temp2)-1, fp);
 	if(temp2[strlen(temp2) - 1] == '\n')
@@ -123,6 +139,7 @@ int main(int argc, char *argv[])
 	strcpy(cmdfull, strcat(strcat(strcpy(temp, "cd "), currentdirectory), " && \0"));
 	memset(buf, 0, sizeof(buf));
 	memset(temp2, 0, sizeof(temp2));
+	pclose(fp);
 
 	//If no port number, username or ip provided
 	if (argc == 3)
@@ -330,6 +347,7 @@ int main(int argc, char *argv[])
 			memset(buf, 0, sizeof(buf));
 			nr = read(sd, buf, MAXF);
 			filesize = atol(buf);
+			nw = write(sd, filename, strlen(filename));
 			memset(buf, 0, sizeof(buf));
 			nr = read(sd, buf, MAXF);
 			cpdest(buf, path, filesize);
