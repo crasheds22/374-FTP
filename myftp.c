@@ -1,5 +1,5 @@
 /*
- *	ser4.c - (Topic 10, HX 15/5/1995)
+ *	cli4.c - (Topic 10, HX 15/5/1995)
  *		Client for reversing reversing strings, using TCP socket
  *		The server address is hard coded
  *
