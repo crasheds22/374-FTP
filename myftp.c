@@ -87,7 +87,8 @@ int cpsrc(char src[], char buf[])
 	FILE *f;	
 	if ((f = fopen(src, "rb")) == NULL)
 	{
-		printf("Error! opening file");     
+		strcpy(buf, "Error");
+		fsize = strlen(buf);        
 	}
 	else
 	{
@@ -350,8 +351,15 @@ int main(int argc, char *argv[])
 			nw = write(sd, filename, strlen(filename));
 			memset(buf, 0, sizeof(buf));
 			nr = read(sd, buf, MAXF);
-			cpdest(buf, path, filesize);
-			memset(buf, 0, sizeof(buf));
+			if(strcmp(buf, "Error") == 0)
+			{
+				printf("Error! opening file\n");
+			}
+			else
+			{
+				cpdest(buf, path, filesize);
+			}
+				memset(buf, 0, sizeof(buf));
 		}
 		else if(strncmp(buf, "put ", 4) == 0)
 		{
@@ -366,6 +374,10 @@ int main(int argc, char *argv[])
 			sprintf(filesizestr, "%lu", filesize);
 			nw = write(sd, filesizestr, strlen(filesizestr));
 			nw = write(sd, buf, filesize);	
+			if(strcmp(buf, "Error") == 0)
+			{
+				printf("Error! opening file\n");
+			}
 			memset(buf, 0, sizeof(buf));	
 		}	
 		else

@@ -153,7 +153,8 @@ int cpsrc(char src[], char buf[])
 	FILE *f;	
 	if ((f = fopen(src, "rb")) == NULL)
 	{
-		printf("Error! opening file");     
+		strcpy(buf, "Error");
+		fsize = strlen(buf);   
 	}
 	else
 	{
@@ -164,8 +165,8 @@ int cpsrc(char src[], char buf[])
 		fread(buf, fsize, 1, f);
 		fclose(f);
 		buf[fsize] = 0;
-		return(fsize);
 	}
+	return(fsize);
 }
 
 void serve_a_client(int sd, char initdir[])
@@ -342,7 +343,10 @@ void serve_a_client(int sd, char initdir[])
 			filesize = atol(buf);
 			memset(buf, 0, sizeof(buf));
 			nr = read(sd, buf, MAXF);
-			cpdest(buf, path, filesize);
+			if(strcmp(buf, "Error") != 0)
+			{
+				cpdest(buf, path, filesize);
+			}
 			memset(buf, 0, sizeof(buf));			
 		}
 	}
