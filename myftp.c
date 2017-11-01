@@ -17,8 +17,12 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#include <netdb.h>
+
 #define BUF_SIZE 	256
 #define MAXF		10240
+
+struct addrinfo hints, *ipinfo;
 
 #ifdef _WIN32
 
@@ -121,6 +125,8 @@ int main(int argc, char *argv[])
 	char filesizestr[256];
 	int ret_val;
 
+	char hostname[256];
+
 	memset(path, 0, sizeof(path));
 	memset(filename, 0, sizeof(filename));
 	memset(cmdfull, 0, sizeof(cmdfull));
@@ -130,42 +136,60 @@ int main(int argc, char *argv[])
 	memset(filesizestr, 0, sizeof(filesizestr));
 	memset(buf, 0, sizeof(buf));
 
-	fp = popen("cd && pwd", "r"); 
+	fp = popen("cd && pwd", "r");
+
 	fgets(temp2, sizeof(temp2)-1, fp);
+
 	if(temp2[strlen(temp2) - 1] == '\n')
 	{
 		temp2[strlen(temp2) - 1] = '\0';
 	}
+
 	strcpy(currentdirectory, temp2);
 	strcpy(cmdfull, strcat(strcat(strcpy(temp, "cd "), currentdirectory), " && \0"));
+
 	memset(buf, 0, sizeof(buf));
 	memset(temp2, 0, sizeof(temp2));
+
 	pclose(fp);
 
-	//If no port number, username or ip provided
-	if (argc == 3)
-	{
-		pn = argv[1];
+	//If no hostname or ip provided
+	if (argc == 2)
+	{		
+		*hostname = argv[1];
+	
+		int result = getaddrinfo(hostname, NULL, &hints, &ipinfo);
+		if(result)
+		{
+			hostname[strlen(hostname)] = ".";
+			ip = conviptodec(hostname);
+		}
+		else
+		{
+			struct addrinfo *p;
+			char host[256];
 
-		argv[2][strlen(argv[2])] = '.';
-		ip = conviptodec(argv[2]);
-		//usrnm = argv[3];
+			for(p = ipinfo; p != NULL; p = p->ai_next);
+			{
+				getnameinfo(p->ai_addr, p->ai_addrlen, host, sizeof(host), NULL, 0, NI_NUMERICHOST);
+				puts(host);
+			}
+			
+			host[strlen(host)] = ".";
+			ip = conviptodec(host);
+
+			free(ipinfo);
+		}
+
+		pn = 40024;
 	}
 	else
 	{
-		//Prompt for port number
-		printf("Port number: \n");
-		fgets(temp, sizeof(temp), stdin);
-		pn = atoi(temp);
-
-		//Prompt for ip address in A.B.C.D form -> ipstr
-		printf("IP number (in the form: A.B.C.D): \n");
-		fgets(ipstr, 16, stdin);
-		ipstr[strlen(ipstr)] = '.';
-
+		strcpy(ipstr, "127.0.0.1.");
 		ip = conviptodec(ipstr);
 
-		//Prompt for desired username
+		pn = 40024;
+		
 	}
 
 	/*Get host address and build a server socket address */
@@ -351,6 +375,7 @@ int main(int argc, char *argv[])
 			nw = write(sd, filename, strlen(filename));
 			memset(buf, 0, sizeof(buf));
 			nr = read(sd, buf, MAXF);
+
 			if(strcmp(buf, "Error") == 0)
 			{
 				printf("Error! opening file\n");
@@ -359,7 +384,8 @@ int main(int argc, char *argv[])
 			{
 				cpdest(buf, path, filesize);
 			}
-				memset(buf, 0, sizeof(buf));
+
+			memset(buf, 0, sizeof(buf));
 		}
 		else if(strncmp(buf, "put ", 4) == 0)
 		{
