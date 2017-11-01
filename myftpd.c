@@ -169,8 +169,10 @@ int cpsrc(char src[], char buf[])
 	return(fsize);
 }
 
-void serve_a_client(int sd, char initdir[])
+void serve_a_client(int sd, char initdir[], FILE* log)
 {
+	fputs("A client Has Connected\n", log);
+
 	FILE *fp;
 	int nr, nw;
 	char buf[MAXF];
@@ -178,7 +180,7 @@ void serve_a_client(int sd, char initdir[])
 	char filename[256];
 	char cmdfull[256];
 	char temp[256];
-	char username[256];	
+	char logstring[256];	
 	char currentdirectory[256];
 	char temp2[1035];
 	char filesizestr[256];
@@ -193,6 +195,7 @@ void serve_a_client(int sd, char initdir[])
 	memset(temp2, 0, sizeof(temp2));
 	memset(filesizestr, 0, sizeof(filesizestr));
 	memset(buf, 0, sizeof(buf));
+	memset(logstring, 0, sizeof(logstring));
 
 	fp = popen("cd && pwd", "r"); 
 	fgets(temp2, sizeof(temp2)-1, fp);
@@ -216,8 +219,12 @@ void serve_a_client(int sd, char initdir[])
 		if((nr = read(sd, buf, sizeof(buf))) <= 0)
 		{
 			//Connection broke down
+			fputs("A client Has Disconnected\n", log);
 			exit(0);
 		}
+		strcat(strcat(strcpy(logstring, "client: "),buf), "\n");
+		fputs(logstring, log);
+		memset(logstring, 0, sizeof(logstring));
 		
 		//Process data
 		buf[nr] = '\0';
@@ -240,6 +247,9 @@ void serve_a_client(int sd, char initdir[])
 			}
 			pclose(fp);
 			nw = write(sd, buf, strlen(buf));
+			strcat(strcat(strcpy(logstring, "Server: "),buf), "\n");
+			fputs(logstring, log);
+			memset(logstring, 0, sizeof(logstring));
 			memset(buf, 0, sizeof(buf));
 		}
 		else if(strcmp(buf, "dir") == 0)
@@ -258,6 +268,9 @@ void serve_a_client(int sd, char initdir[])
 			}
 			pclose(fp);
 			nw = write(sd, buf, strlen(buf));
+			strcat(strcat(strcpy(logstring, "Server: "),buf), "\n");
+			fputs(logstring, log);
+			memset(logstring, 0, sizeof(logstring));
 			memset(buf, 0, sizeof(buf));
 			
 		}
@@ -270,7 +283,6 @@ void serve_a_client(int sd, char initdir[])
 				}
 			#endif
 			strcat(strcpy(temp, cmdfull), buf);
-			ret_val = system(temp);
 
 			fp = popen(temp, "r");
 			if (fp == NULL) 
@@ -284,7 +296,7 @@ void serve_a_client(int sd, char initdir[])
 			}
 			pclose(fp);
 
-			if(ret_val == 0)
+			if(strcmp(buf, "") != 0)
 			{
 				#ifdef _WIN32
 					strcat(temp, " && cd");
@@ -307,11 +319,15 @@ void serve_a_client(int sd, char initdir[])
 				pclose(fp);
 			}
 			nw = write(sd, buf, strlen(buf));
+			strcat(strcat(strcpy(logstring, "Server: "),buf), "\n");
+			fputs(logstring, log);
+			memset(logstring, 0, sizeof(logstring));
 			memset(buf, 0, sizeof(buf));
 		}
 		else if(strcmp(buf, "kill") == 0) 
 		{
 			kill(getppid(), SIGTERM);
+			fclose(log);
 		}
 		else if(strncmp(buf, "get", 3) == 0)
 		{
@@ -325,8 +341,18 @@ void serve_a_client(int sd, char initdir[])
 			filesize = cpsrc(path, buf);
 			sprintf(filesizestr, "%lu", filesize);
 			nw = write(sd, filesizestr, strlen(filesizestr));
+			fputs("Server sent file size\n", log);
 			nr = read(sd, filename, strlen(filename));
+			fputs("Server handshake\n", log);
 			nw = write(sd, buf, filesize);	
+			if(strcmp(buf, "Error") != 0)
+			{
+				fputs("Server error opening file name\n", log);
+			}
+			else
+			{
+				fputs("Server sent file\n", log);
+			}
 			memset(buf, 0, sizeof(buf));	
 		}
 		else if(strncmp(buf, "put", 3) == 0)
@@ -338,14 +364,21 @@ void serve_a_client(int sd, char initdir[])
 			}
 			strcat(strcat(strcpy(path, currentdirectory), "/"), filename); 
 			nw = write(sd, filename, strlen(filename));
+			fputs("Server sent file name\n", log);
 			memset(buf, 0, sizeof(buf));
 			nr = read(sd, buf, MAXF);
+			fputs("Server received file size\n", log);
 			filesize = atol(buf);
 			memset(buf, 0, sizeof(buf));
 			nr = read(sd, buf, MAXF);
 			if(strcmp(buf, "Error") != 0)
 			{
+				fputs("Server error receiving file name\n", log);
 				cpdest(buf, path, filesize);
+			}
+			else
+			{
+				fputs("Server received file\n", log);
 			}
 			memset(buf, 0, sizeof(buf));			
 		}
@@ -360,6 +393,8 @@ int main(int argc, char *argv[])
 	pid_t pid;
 	struct sockaddr_in ser_addr, cli_addr;
 	
+	FILE* log = fopen("log.txt", "wa");	
+
 	//Get port number from command line or user input
 	if(argc == 2)
 	{
@@ -376,7 +411,7 @@ int main(int argc, char *argv[])
 	else if(argc == 4)
 	{
 		strcpy(initdir, argv[1]);
-		spn = argv[2];
+		spn = *argv[2];
 
 		argv[3][strlen(argv[3])] = '.';
 		sip = conviptodec(argv[3]);
@@ -453,7 +488,7 @@ int main(int argc, char *argv[])
 		//Now in child, server the current client
 		close(sd);
 		
-		serve_a_client(nsd, initdir);
+		serve_a_client(nsd, initdir, log);
 	}
 
 	exit(0);

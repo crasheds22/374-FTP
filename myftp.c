@@ -189,7 +189,7 @@ int main(int argc, char *argv[])
 	while(++i)
 	{
 		//Prompt user for input
-		printf("> ", i);
+		printf("> ");
 
 		//Read in a line
 		fgets(buf, BUF_SIZE, stdin);
@@ -227,7 +227,6 @@ int main(int argc, char *argv[])
 			#endif
 			strcat(strcpy(temp, cmdfull), buf);
 			
-			//system(temp);
 			fp = popen(temp, "r");
 			if (fp == NULL) 
 			{
@@ -249,7 +248,6 @@ int main(int argc, char *argv[])
 		{
 			strcpy(buf, "dir");
 			strcat(strcpy(temp, cmdfull), buf);
-			//system(temp);
 			fp = popen(temp, "r");
 			if (fp == NULL) 
 			{
@@ -279,8 +277,8 @@ int main(int argc, char *argv[])
 				}
 			#endif
 			strcat(strcpy(temp, cmdfull), buf);
-			ret_val = system(temp);
-			if(ret_val == 0)
+
+			if(strcmp(buf, "") != 0)
 			{
 				#ifdef _WIN32
 					strcat(temp, " && cd");
