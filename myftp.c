@@ -143,13 +143,20 @@ int main(int argc, char *argv[])
 	pclose(fp);
 
 	//If no port number, username or ip provided
+	if (argc == 2)
+	{
+		argv[1][strlen(argv[1])] = '.';
+		ip = conviptodec(argv[1]);
+		
+		printf("Port number: \n");
+		fgets(temp, sizeof(temp), stdin);
+		pn = atoi(temp);
+	}
 	if (argc == 3)
 	{
-		pn = argv[1];
-
-		argv[2][strlen(argv[2])] = '.';
-		ip = conviptodec(argv[2]);
-		//usrnm = argv[3];
+		argv[1][strlen(argv[1])] = '.';
+		ip = conviptodec(argv[1]);
+		pn = *argv[2];
 	}
 	else
 	{
@@ -158,14 +165,7 @@ int main(int argc, char *argv[])
 		fgets(temp, sizeof(temp), stdin);
 		pn = atoi(temp);
 
-		//Prompt for ip address in A.B.C.D form -> ipstr
-		printf("IP number (in the form: A.B.C.D): \n");
-		fgets(ipstr, 16, stdin);
-		ipstr[strlen(ipstr)] = '.';
-
-		ip = conviptodec(ipstr);
-
-		//Prompt for desired username
+		ip = conviptodec("127.0.0.1.");
 	}
 
 	/*Get host address and build a server socket address */
@@ -189,7 +189,7 @@ int main(int argc, char *argv[])
 	while(++i)
 	{
 		//Prompt user for input
-		printf("Client input[%d]: ", i);
+		printf("> ", i);
 
 		//Read in a line
 		fgets(buf, BUF_SIZE, stdin);
