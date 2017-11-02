@@ -411,7 +411,7 @@ int main(int argc, char *argv[])
 	else if(argc == 4)
 	{
 		strcpy(initdir, argv[1]);
-		spn = *argv[2];
+		spn = atol(argv[2]);
 
 		argv[3][strlen(argv[3])] = '.';
 		sip = conviptodec(argv[3]);
