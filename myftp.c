@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
 		fgets(temp, sizeof(temp), stdin);
 		pn = atoi(temp);
 	}
-	if (argc == 3)
+	else if (argc == 3)
 	{
 		argv[1][strlen(argv[1])] = '.';
 		ip = conviptodec(argv[1]);
